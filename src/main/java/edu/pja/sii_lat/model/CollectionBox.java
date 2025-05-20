@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.util.*;
 
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -20,9 +21,8 @@ public class CollectionBox {
     private Integer id;
 
 
-
     @ManyToOne
-    @JoinColumn(name = "event_id",nullable = false)
+    @JoinColumn(name = "event_id")
     private Event event;
 
     @ElementCollection(fetch = FetchType.LAZY)
@@ -44,5 +44,19 @@ public class CollectionBox {
         }else {
             funds.put(currencyCode,amount);
         }
+    }
+
+
+    /**
+     * checks if box is empty
+     * @return true if box is empty, false if it's not
+     */
+    public boolean isEmpty(){
+        for(String currency : funds.keySet()){
+            if(funds.get(currency) > 0) {
+                return false;
+            }
+        }
+        return true;
     }
 }
