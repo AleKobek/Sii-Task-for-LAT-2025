@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -23,8 +22,8 @@ public class ExchangeRateService implements IExchangeRateService{
 
 
 
-    public BigDecimal getRateFor(String currencyCodeFrom, String currencyCodeTo) {
-        // checking parameters
+    public double getRateFor(String currencyCodeFrom, String currencyCodeTo) {
+        // validating parameters
         if(currencyCodeFrom == null || currencyCodeFrom.isBlank()){
             throw new RuntimeException("Cannot fetch rates for an empty currency");
         }
@@ -40,9 +39,9 @@ public class ExchangeRateService implements IExchangeRateService{
             }
         }
         if(currencyCodeFrom.equals(currencyCodeTo)){
-            return BigDecimal.ONE;
+            return 1.0;
         }
-        // done checking parameters, sending request
+        // done validating parameters, sending request
         GetExchangeRateResponse res = client.get().uri("/" + currencyCodeFrom).retrieve().bodyToMono(GetExchangeRateResponse.class).block();
         if(res == null){
             throw new RuntimeException("Empty response - failed to fetch rates for "+currencyCodeFrom);
@@ -60,7 +59,7 @@ public class ExchangeRateService implements IExchangeRateService{
     @Data
     private static class GetExchangeRateResponse {
         @JsonProperty("conversion_rates")
-        private Map<String, BigDecimal> rates;
+        private Map<String, Double> rates;
     }
 
 }

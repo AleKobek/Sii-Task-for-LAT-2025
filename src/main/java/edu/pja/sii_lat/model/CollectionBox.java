@@ -34,8 +34,8 @@ public class CollectionBox {
 
 
     /**
-     * adds funds to a box, retaining its currency
-     * @param currencyCode code of donation's currency
+     * adds funds to the box, retaining its currency
+     * @param currencyCode code of the donation's currency
      * @param amount amount of donated money
      */
     public void addFunds(String currencyCode, double amount){
@@ -48,8 +48,8 @@ public class CollectionBox {
 
 
     /**
-     * checks if box is empty
-     * @return true if box is empty, false if it's not
+     * checks if the box is empty
+     * @return true if the box is empty, false if it's not
      */
     public boolean isEmpty(){
         for(String currency : funds.keySet()){

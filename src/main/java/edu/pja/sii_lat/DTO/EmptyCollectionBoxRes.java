@@ -7,8 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class EventAndAccountDTO {
-    private String name;
-    private String fundsCurrencyCode;
-    private double funds;
+public class EmptyCollectionBoxRes {
+    private Integer boxId;
+    private Integer eventId;
+    private double eventFunds;
+    private String eventCurrencyCode;
 }

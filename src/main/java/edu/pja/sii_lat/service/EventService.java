@@ -2,7 +2,7 @@ package edu.pja.sii_lat.service;
 
 import edu.pja.sii_lat.DTO.CreateEventReq;
 import edu.pja.sii_lat.DTO.CreateEventRes;
-import edu.pja.sii_lat.DTO.EventAndAccountDTO;
+import edu.pja.sii_lat.DTO.FinancialReportRes;
 import edu.pja.sii_lat.model.Event;
 import edu.pja.sii_lat.repository.EventRepository;
 
@@ -21,22 +21,28 @@ public class EventService implements IEventService{
     private final IExchangeRateService exchangeRateService;
 
 
-    // 1. Create a new fundraising event.
     public CreateEventRes createEvent(CreateEventReq req){
+
+        // validating parameters
         if(req.getName() == null ||req.getName().isBlank()){
-            throw new IllegalArgumentException("Event name cannot be empty");
+            throw new IllegalArgumentException("Event's name cannot be empty");
         }
         if(req.getFundsCurrencyCode() == null || req.getFundsCurrencyCode().isBlank()){
             throw new IllegalArgumentException("Event's account currency cannot be empty");
         }
+
         if(exchangeRateService.getValidCurrencies().isEmpty()){
-            // only to get valid currencies
+            // only to load valid currencies
             try {
                 exchangeRateService.getRateFor("USD", "PLN");
             }catch (RuntimeException e){
                 throw new RuntimeException("Cannot create event - error occurred while fetching supported currencies");
             }
         }
+        if(!exchangeRateService.getValidCurrencies().contains(req.getFundsCurrencyCode())){
+            throw new RuntimeException("Currency code " + req.getFundsCurrencyCode() + " is not supported");
+        }
+        // done validating, creating event
         Event event = new Event();
         event.setFunds(0);
         event.setName(req.getName());
@@ -47,16 +53,14 @@ public class EventService implements IEventService{
         return new CreateEventRes(savedEvent.getId(), savedEvent.getName(), savedEvent.getFundsCurrencyCode());
     }
 
-    // 8. Display a financial report with all fundraising events and the sum of their accounts.
-    public List<EventAndAccountDTO> financialReport(){
+    public List<FinancialReportRes> generateFinancialReport(){
         List<Event> events = eventRepository.findAll().stream().toList();
-        List<EventAndAccountDTO> finantialReportList = new ArrayList<>();
+        List<FinancialReportRes> finantialReportList = new ArrayList<>();
         for(Event event : events){
-            finantialReportList.add(new EventAndAccountDTO(
+            finantialReportList.add(new FinancialReportRes(
                     event.getName(), event.getFundsCurrencyCode(), event.getFunds()
             ));
         }
         return finantialReportList;
     }
 }
-

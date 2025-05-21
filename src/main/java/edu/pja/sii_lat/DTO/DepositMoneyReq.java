@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CollectionBoxEventIdDTO {
-    private Integer idBox;
-    private Integer idEvent;
+public class DepositMoneyReq {
+    private Integer boxId;
+    private double amount;
+    private String fundsCurrencyCode;
 }

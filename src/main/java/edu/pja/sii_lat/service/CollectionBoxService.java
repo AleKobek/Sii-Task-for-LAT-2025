@@ -1,8 +1,6 @@
 package edu.pja.sii_lat.service;
 
-import edu.pja.sii_lat.DTO.BasicCollectionBoxDTO;
-import edu.pja.sii_lat.DTO.CollectionBoxEventIdDTO;
-import edu.pja.sii_lat.DTO.ListCollectionBoxResponse;
+import edu.pja.sii_lat.DTO.*;
 import edu.pja.sii_lat.model.CollectionBox;
 import edu.pja.sii_lat.model.Event;
 import edu.pja.sii_lat.repository.CollectionBoxRepository;
@@ -24,43 +22,31 @@ public class CollectionBoxService implements ICollectionBoxService{
     private final IExchangeRateService exchangeRateService;
 
 
-    // 2. Register a new collection box.
-    public CollectionBoxEventIdDTO registerCollectionBox(Integer eventId){
-        Optional<Event> eventOptional = eventRepository.findById(eventId);
-        if(eventOptional.isEmpty()){
-            throw new EntityNotFoundException("Couldn't find event with id = " + eventId + " in the database");
-        }
-        Event event = eventOptional.get();
+
+    public CreateCollectionBoxRes registerCollectionBox(){
         CollectionBox collectionBox = new CollectionBox();
-        collectionBox.setEvent(event);
-        event.getCollectionBoxSet().add(collectionBox);
         CollectionBox savedCollectionBox = collectionBoxRepository.save(collectionBox);
-        eventRepository.save(event);
-        return new CollectionBoxEventIdDTO(savedCollectionBox.getId(), eventId);
+        return new CreateCollectionBoxRes(savedCollectionBox.getId(), savedCollectionBox.getFunds());
     }
 
-    // 3. List all collection boxes. Include information if the box is assigned (but don’t expose to what
-    //    fundraising event) and if it is empty or not (but don’t expose the actual value in the box).
+
+
     public List<ListCollectionBoxResponse> listCollectionBoxes(){
         List<CollectionBox> collectionBoxes = collectionBoxRepository.findAll().stream().toList();
-        List<ListCollectionBoxResponse> list = new ArrayList<>();
+        List<ListCollectionBoxResponse> DTOsList = new ArrayList<>();
         for(CollectionBox collectionBox: collectionBoxes){
-            list.add(new ListCollectionBoxResponse(
-                    collectionBox.getId(), collectionBox.getEvent() == null,collectionBox.isEmpty()
+            DTOsList.add(new ListCollectionBoxResponse(
+                    collectionBox.getId(), collectionBox.getEvent() == null, collectionBox.isEmpty()
             ));
         }
-        return list;
+        return DTOsList;
     }
 
-    // 4. Unregister (remove) a collection box (e.g. in case it was damaged or stolen).
-    public void unregisterCollectionBox(Integer id){
-        Optional<CollectionBox> collectionBoxOptional = collectionBoxRepository.findById(id);
-        if(collectionBoxOptional.isEmpty()){
-            throw new EntityNotFoundException("Couldn't find collection box with id = " + id + " in the database");
-        }
-        CollectionBox collectionBox = collectionBoxOptional.get();
+
+    public void unregisterCollectionBox(Integer boxId){
+        CollectionBox collectionBox = fetchCollectionBox(boxId);
         if(collectionBox.getEvent() == null){
-            throw new RuntimeException("Box with id = " + id + "is not registered to an event");
+            throw new RuntimeException("Box with id = " + boxId + " is not registered to an event");
         }
         collectionBox.getEvent().getCollectionBoxSet().remove(collectionBox);
         collectionBox.getFunds().clear();
@@ -69,73 +55,115 @@ public class CollectionBoxService implements ICollectionBoxService{
         collectionBoxRepository.delete(collectionBox);
     }
 
-    // 5. Assign the collection box to an existing fundraising event.
-    public BasicCollectionBoxDTO assignCollectionBox(CollectionBoxEventIdDTO dto){
-        Integer boxId = dto.getIdBox();
-        Integer eventId = dto.getIdEvent();
 
-        if(boxId == null){
-            throw new IllegalArgumentException("Box id cannot be empty");
-        }
-        if(eventId == null){
-            throw new IllegalArgumentException("Event id cannot be empty");
-        }
+    public BasicCollectionBoxDTO assignCollectionBox(AssignCollectionBoxReq req){
+        Integer boxId = req.getIdBox();
+        Integer eventId = req.getIdEvent();
 
-        Optional<CollectionBox> collectionBoxOptional = collectionBoxRepository.findById(boxId);
-        if(collectionBoxOptional.isEmpty()){
-            throw new EntityNotFoundException("Couldn't find collection box with id = " + boxId + " in the database");
-        }
-        Optional<Event> eventOptional = eventRepository.findById(eventId);
-        if(eventOptional.isEmpty()){
-            throw new EntityNotFoundException("Couldn't find event with id = " + eventId + " in the database");
-        }
-
-        CollectionBox collectionBox = collectionBoxOptional.get();
-        Event event = eventOptional.get();
+        CollectionBox collectionBox = fetchCollectionBox(boxId);
+        Event event = fetchEvent(eventId);
 
         if(collectionBox.getEvent() != null){
-            throw new RuntimeException("This box is already assigned!");
+            throw new RuntimeException("Box with id = " + boxId + " is already assigned");
         }
         if(!collectionBox.isEmpty()){
-            throw new RuntimeException("This box is not empty!");
+            throw new RuntimeException("Box with id = " + boxId + " is not empty");
         }
         collectionBox.setEvent(event);
         event.getCollectionBoxSet().add(collectionBox);
         collectionBoxRepository.save(collectionBox);
         eventRepository.save(event);
-        return new BasicCollectionBoxDTO(collectionBox.getId(), collectionBox.getEvent().getId(), collectionBox.getFunds());
+        return new BasicCollectionBoxDTO(
+                collectionBox.getId(), collectionBox.getEvent().getId(), collectionBox.getFunds()
+        );
     }
 
 
+    public BasicCollectionBoxDTO depositMoney(DepositMoneyReq req){
+        Integer boxId = req.getBoxId();
+        // validating parameters
+        if(req.getAmount() == 0){
+            throw new IllegalArgumentException("Amount to deposit cannot be zero");
+        }
+        if(exchangeRateService.getValidCurrencies().isEmpty()){
+            // only to get valid currencies
+            try {
+                exchangeRateService.getRateFor("USD", "PLN");
+            }catch (RuntimeException e){
+                throw new RuntimeException("Cannot deposit money - error occurred while fetching supported currencies");
+            }
+        }
+        if(!exchangeRateService.getValidCurrencies().contains(req.getFundsCurrencyCode())){
+            throw new RuntimeException("Currency code " + req.getFundsCurrencyCode() + " is not supported");
+        }
+        CollectionBox collectionBox = fetchCollectionBox(boxId);
+        // done validating, adding funds
+        collectionBox.addFunds(req.getFundsCurrencyCode(), req.getAmount());
+        CollectionBox savedCollectionBox = collectionBoxRepository.save(collectionBox);
+        return new BasicCollectionBoxDTO(
+                savedCollectionBox.getId(), savedCollectionBox.getEvent().getId(), savedCollectionBox.getFunds()
+        );
+    }
 
 
+    public EmptyCollectionBoxRes emptyCollectionBox(Integer boxId){
+        // validating parameters
+        CollectionBox collectionBox = fetchCollectionBox(boxId);
+        if(collectionBox.isEmpty()){
+            throw new RuntimeException("Box with id = " + boxId + " is already empty");
+        }
+        Event event = collectionBox.getEvent();
+        if(event == null){
+            throw new RuntimeException("Box with id = " + boxId + " is not assigned to an event");
+        }
+        // done validating, emptying box
+        double moneyToTransfer = 0;
+        String targetCurrency = event.getFundsCurrencyCode();
+        // processing each currency
+        for(String currencyCode: collectionBox.getFunds().keySet()){
+            double amountBeforeExchange = collectionBox.getFunds().get(currencyCode);
+            // if it's the same currency
+            if (currencyCode.equals(targetCurrency)) {
+                moneyToTransfer += amountBeforeExchange;
+            }
+            else {
+                double exchangeRate = exchangeRateService.getRateFor(currencyCode, targetCurrency);
+                moneyToTransfer += amountBeforeExchange * exchangeRate;
+            }
+            // delete if empty
+            collectionBox.getFunds().remove(currencyCode);
+        }
+        collectionBoxRepository.save(collectionBox);
+        event.setFunds(event.getFunds() + moneyToTransfer);
+        eventRepository.save(event);
+        return new EmptyCollectionBoxRes(boxId, event.getId(), event.getFunds(), targetCurrency);
+    }
 
     /**
-     * collects funds from all collection boxes, emptying them and retaining currencies
-     * @return map with currency code as a key and funds as a value
+     * fetches a collection box from the database, with checking if passed id is null
      */
-    private Map<String, Double> collectFunds(Event event){
-        Map<String, Double> funds = new HashMap<>();
-        // checking all collection boxes
-        for(CollectionBox collectionBox: event.getCollectionBoxSet()){
-            // map stores all funds in that collection box
-            Map<String, Double> collectionBoxFunds = collectionBox.getFunds();
-            // for every currency in that box
-            for(String currency : collectionBoxFunds.keySet()){
-                // update existing currency amount
-                if(funds.containsKey(currency)){
-                    double currentAmount = funds.get(currency);
-                    currentAmount+=collectionBoxFunds.get(currency);
-                    funds.replace(currency, currentAmount);
-                    // add new currency
-                }else {
-                    funds.put(currency, collectionBoxFunds.get(currency));
-                }
-            }
-            // emptying the box
-            collectionBox.getFunds().clear();
+    private CollectionBox fetchCollectionBox(Integer boxId) {
+        if(boxId == null){
+            throw new IllegalArgumentException("Box id cannot be empty");
         }
-        return funds;
+        Optional<CollectionBox> collectionBoxOptional = collectionBoxRepository.findById(boxId);
+        if(collectionBoxOptional.isEmpty()){
+            throw new EntityNotFoundException("Couldn't find collection box with id = " + boxId + " in the database");
+        }
+        return collectionBoxOptional.get();
     }
 
+    /**
+     * fetches an event from the database, with checking if passed id is null
+     */
+    private Event fetchEvent(Integer eventId) {
+        if(eventId == null){
+            throw new IllegalArgumentException("Event id cannot be empty");
+        }
+        Optional<Event> eventOptional = eventRepository.findById(eventId);
+        if(eventOptional.isEmpty()){
+            throw new EntityNotFoundException("Couldn't find event with id = " + eventId + " in the database");
+        }
+        return eventOptional.get();
+    }
 }
