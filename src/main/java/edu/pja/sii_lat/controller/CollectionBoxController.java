@@ -19,7 +19,7 @@ public class CollectionBoxController {
 
     /**
      * 2. Register a new collection box.
-     * @return id and funds of created box
+     * @return id and funds of the created box
      */
     @PostMapping
     public ResponseEntity<CreateCollectionBoxRes> registerCollectionBox(){
@@ -40,7 +40,7 @@ public class CollectionBoxController {
 
     /**
      * 4. Unregister (remove) a collection box (e.g. in case it was damaged or stolen).
-     * @param boxId id of box to unregister
+     * @param boxId id of the box to unregister
      */
     @DeleteMapping("/{boxId}")
     public ResponseEntity<Void> unregisterCollectionBox(@PathVariable Integer boxId){
@@ -50,7 +50,7 @@ public class CollectionBoxController {
 
     /**
      * 5. Assign the collection box to an existing fundraising event.
-     * @param req id of box and id of the event
+     * @param req id of the box and id of the event
      * @return id of the assigned box, id of the assigned event, and map of the box's funds
      */
     @PutMapping("/assign")
@@ -62,7 +62,7 @@ public class CollectionBoxController {
     /**
      * 6. Put (add) some money inside the collection box.
      * @param req id of the box, amount of money to deposit and currency of the money
-     * @return id of the box, id of the event assigned to it, and map of the box's funds
+     * @return id of the box, id of the event assigned to it, and map of the box's funds - currency code and amount of money
      */
     @PutMapping("/deposit")
     public ResponseEntity<BasicCollectionBoxDTO> depositMoney(@RequestBody DepositMoneyReq req){
@@ -73,7 +73,7 @@ public class CollectionBoxController {
     /**
      * 7. Empty the collection box i.e. “transfer” money from the box to the fundraising event’s account.
      * @param boxId id of the box to empty
-     * @return id of emptied box, id of event assigned to id and the box's funds
+     * @return id of the emptied box, id of the event assigned to it and the box's funds
      */
     @PutMapping("/{boxId}")
     public ResponseEntity<EmptyCollectionBoxRes> emptyCollectionBox(@PathVariable Integer boxId){

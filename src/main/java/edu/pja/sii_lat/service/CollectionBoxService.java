@@ -82,8 +82,8 @@ public class CollectionBoxService implements ICollectionBoxService{
     public BasicCollectionBoxDTO depositMoney(DepositMoneyReq req){
         Integer boxId = req.getBoxId();
         // validating parameters
-        if(req.getAmount() == 0){
-            throw new IllegalArgumentException("Amount to deposit cannot be zero");
+        if(req.getAmount() <= 0){
+            throw new IllegalArgumentException("Amount to deposit must be positive");
         }
         if(exchangeRateService.getValidCurrencies().isEmpty()){
             // only to get valid currencies
@@ -140,7 +140,7 @@ public class CollectionBoxService implements ICollectionBoxService{
     }
 
     /**
-     * fetches a collection box from the database, with checking if passed id is null
+     * fetches a collection box from the database, with checking if passed id is not null
      */
     private CollectionBox fetchCollectionBox(Integer boxId) {
         if(boxId == null){

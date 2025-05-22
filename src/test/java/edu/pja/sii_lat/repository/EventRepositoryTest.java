@@ -26,6 +26,7 @@ public class EventRepositoryTest {
     void init(){
         event = Event.builder()
                 .name("TEST")
+                .fundsCurrencyCode("USD")
                 .build();
     }
 

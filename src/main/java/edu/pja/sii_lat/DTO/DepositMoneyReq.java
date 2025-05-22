@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DepositMoneyReq {
+public class DepositMoneyReq{
     private Integer boxId;
     private double amount;
     private String fundsCurrencyCode;

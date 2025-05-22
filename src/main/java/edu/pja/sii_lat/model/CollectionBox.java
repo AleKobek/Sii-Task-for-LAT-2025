@@ -25,9 +25,10 @@ public class CollectionBox {
     @JoinColumn(name = "event_id")
     private Event event;
 
-    @ElementCollection(fetch = FetchType.LAZY)
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "collection_box_funds", joinColumns = @JoinColumn(name = "collection_box_id"))
     @MapKeyColumn(name = "currency")
+    @Builder.Default
     private Map<String, Double> funds = new HashMap<>();
 
 

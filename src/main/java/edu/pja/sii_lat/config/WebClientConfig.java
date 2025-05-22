@@ -6,9 +6,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
 public class WebClientConfig {
-
     @Bean
     public WebClient webClient() {
+        // enter Your key here
         String apiKey = "590f0620afc981a78315873c";
         String url = "https://v6.exchangerate-api.com/v6/" + apiKey + "/latest/";
         return WebClient.builder()

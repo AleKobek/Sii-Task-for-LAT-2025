@@ -6,9 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 @Entity
@@ -23,7 +21,7 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
 
-    @NotBlank(message = "Name is required!!")
+    @NotBlank(message = "Name is required!")
     @Size(min = 2, max = 250)
     private String name;
 
@@ -32,9 +30,10 @@ public class Event {
     private String fundsCurrencyCode;
 
     @Min(0)
-    private double funds;
+    @Builder.Default
+    private double funds = 0;
 
-    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "event", fetch = FetchType.EAGER)
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
